@@ -1,6 +1,6 @@
 <div class="rf-map">
     <div class="district"><b></b><span></span></div>
-    <div class="close-district">&times;</div>
+    <div class="close-district">*;</div>
     <div id="RU-SAR" class="district-text">Саратов</div>
     <div id="RU-SA" class="district-text">Саха</div>    
     <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.2" baseProfile="tiny" x="0px" y="0px" viewBox="0 0 1000 600" xml:space="preserve" xmlns:xml="http://www.w3.org/XML/1998/namespace"> 
