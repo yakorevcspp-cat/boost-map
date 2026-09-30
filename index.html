@@ -2,22 +2,21 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Карта — настройка</title>
+<title>Карта</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { width:100%; height:100vh; background:#fff; overflow:hidden; font-family:sans-serif; }
-  .wrap { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
-  .wrap iframe { width:100%; height:100%; border:none; display:block; }
-  #info {
-    position:fixed; top:10px; right:10px; background:#000; color:#0f0;
-    padding:10px 15px; font-size:14px; border-radius:6px; z-index:999;
-    max-width:320px; max-height:80vh; overflow:auto;
+  html, body {
+    width:100%; height:100vh;
+    background:#fff;
+    overflow:hidden;
   }
-  #info b { color:#fff; }
-  #list { color:#ff0; margin-top:8px; word-break:break-all; min-height:20px; }
-  #copyBtn {
-    margin-top:10px; padding:5px 10px; cursor:pointer;
-    background:#0f0; border:none; border-radius:4px; font-weight:bold;
+  .wrap {
+    width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .wrap iframe {
+    width:100%; height:100%;
+    border:none; display:block;
   }
 </style>
 </head>
@@ -25,53 +24,26 @@
   <div class="wrap">
     <iframe id="mapFrame" src="map.svg" scrolling="no"></iframe>
   </div>
-  <div id="info">
-    <b>Кликайте по регионам</b><br>
-    где были мероприятия:
-    <div id="list">—</div>
-    <button id="copyBtn" onclick="copyList()">Скопировать</button>
-  </div>
 
   <script>
-    const selected = new Set();
-    const list = document.getElementById('list');
+    // Регионы, где были мероприятия
+    const activeRegions = [28,29,31,36,37,38,39,40,42,45,46,47,51,52,54,56,58,64,65,66,68,69,71,72,81,100,108,113,115,116,117,118,119,139,140,141,143,144,145,152];
 
     document.getElementById('mapFrame').addEventListener('load', function() {
       const svgDoc = this.contentDocument;
       const paths = svgDoc.querySelectorAll('path');
 
       paths.forEach(function(path, index) {
-        path.style.cursor = 'pointer';
+        // Все регионы — светло-серые
+        path.style.fill = '#E0E0E0';
+        path.style.transition = 'fill 0.3s ease';
 
-        path.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          if (selected.has(index)) {
-            selected.delete(index);
-            path.style.fill = '';
-          } else {
-            selected.add(index);
-            path.style.fill = '#00FF00';
-          }
-
-          const arr = Array.from(selected).sort((a,b) => a-b);
-          list.textContent = arr.length ? arr.join(', ') : '—';
-        });
-      });
-
-      // Восстанавливаем подсветку, если клики уже были (на случай перезагрузки)
-      selected.forEach(function(index) {
-        if (paths[index]) paths[index].style.fill = '#00FF00';
+        // Выбранные — жёлтые
+        if (activeRegions.includes(index)) {
+          path.style.fill = '#FFFE21';
+        }
       });
     });
-
-    function copyList() {
-      const text = Array.from(selected).sort((a,b) => a-b).join(', ');
-      if (!text) { alert('Ничего не выбрано'); return; }
-      navigator.clipboard.writeText(text);
-      alert('Скопировано:\n' + text);
-    }
   </script>
 </body>
 </html>
