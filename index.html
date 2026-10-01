@@ -2,130 +2,45 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Карта</title>
+<title>Карта — определение</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { width:100%; height:100vh; background:#fff; overflow:hidden; font-family:'TikTok Sans', Arial, sans-serif; }
+  html, body { width:100%; height:100vh; background:#fff; overflow:hidden; font-family:sans-serif; }
   .wrap { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
   .wrap iframe { width:100%; height:100%; border:none; display:block; }
-
-  #tooltip {
-    position: fixed;
-    background: #000;
-    border: 1px solid #ffff00;
-    color: #fff;
-    padding: 10px 14px;
-    font-size: 13px;
-    line-height: 1.5;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 9999;
-    max-width: 300px;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  #info {
+    position:fixed; top:10px; right:10px; background:#000; color:#0f0;
+    padding:10px 15px; font-size:14px; border-radius:6px; z-index:999;
+    max-width:320px;
   }
-  #tooltip .region-name {
-    color: #ffff00;
-    font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 4px;
-  }
-  #tooltip .cities {
-    color: #ffffff;
-  }
+  #info b { color:#fff; }
+  #list { color:#ff0; margin-top:8px; word-break:break-all; }
 </style>
 </head>
 <body>
   <div class="wrap">
     <iframe id="mapFrame" src="map.svg" scrolling="no"></iframe>
   </div>
-  <div id="tooltip">
-    <div class="region-name"></div>
-    <div class="cities"></div>
+  <div id="info">
+    <b>Кликайте по регионам</b><br>
+    Индексы появятся здесь:
+    <div id="list">—</div>
   </div>
 
   <script>
-    // ===== СПИСОК РЕГИОНОВ С МЕРОПРИЯТИЯМИ =====
-    // Ключ = индекс path в SVG, значение = {name, cities}
-    const regions = {
-      28:  { name: "Приморский край",         cities: "Владивосток" },
-      29:  { name: "Хабаровский край",        cities: "Хабаровск" },
-      31:  { name: "Амурская область",        cities: "Благовещенск" },
-      36:  { name: "Орловская область",       cities: "Орёл, Ливны" },
-      37:  { name: "Липецкая область",        cities: "Липецк, Грязи, Данков, Елец, Задонск, Лебедянь, Чаплыгин" },
-      38:  { name: "Тамбовская область",      cities: "Тамбов" },
-      39:  { name: "Тульская область",        cities: "Тула" },
-      40:  { name: "Рязанская область",       cities: "Рязань" },
-      42:  { name: "Владимирская область",    cities: "Муром" },
-      45:  { name: "Тверская область",        cities: "Тверь" },
-      46:  { name: "Ярославская область",     cities: "Рыбинск" },
-      47:  { name: "Оренбургская область",    cities: "Орск" },
-      51:  { name: "Пензенская область",      cities: "Пенза, Кузнецк" },
-      52:  { name: "Республика Мордовия",     cities: "Саранск" },
-      54:  { name: "Нижегородская область",   cities: "Дзержинск" },
-      56:  { name: "Республика Татарстан",    cities: "Казань" },
-      58:  { name: "Республика Башкортостан", cities: "Стерлитамак" },
-      64:  { name: "Курганская область",      cities: "Курган, Шадринск" },
-      65:  { name: "Челябинская область",     cities: "Челябинск, Златоуст, Магнитогорск, Миасс, Озёрск" },
-      66:  { name: "Свердловская область",    cities: "Екатеринбург, Каменск-Уральский, Первоуральск" },
-      68:  { name: "Новгородская область",    cities: "Боровичи" },
-      69:  { name: "Вологодская область",     cities: "Вологда, Череповец" },
-      71:  { name: "Санкт-Петербург и Ленинградская область", cities: "Санкт-Петербург, Гатчина" },
-      72:  { name: "Мурманская область",      cities: "Мурманск, Апатиты, Кандалакша, Оленегорск, Полярные Зори, Североморск" },
-      77:  { name: "Архангельская область",   cities: "Архангельск" },
-      80:  { name: "Архангельская область",   cities: "Архангельск" },
-      81:  { name: "Архангельская область",   cities: "Архангельск" },
-      100: { name: "Астраханская область",    cities: "Ахтубинск, Знаменск" },
-      108: { name: "Краснодарский край",      cities: "Краснодар, Кущёвская, Славянск-на-Кубани, Усть-Лабинск" },
-      113: { name: "Кемеровская область",     cities: "Ленинск-Кузнецкий, Новокузнецк, Юрга" },
-      116: { name: "Новосибирская область",   cities: "Новосибирск, Академгородок" },
-      118: { name: "Томская область",         cities: "Томск" },
-      119: { name: "Республика Хакасия",      cities: "Абакан" },
-      139: { name: "Красноярский край",       cities: "Красноярск" },
-      140: { name: "Иркутская область",       cities: "Иркутск" },
-      141: { name: "Забайкальский край",      cities: "Чита" },
-      144: { name: "Ростовская область",      cities: "Ростов-на-Дону, Азов, Каменск-Шахтинский, Новочеркасск, Таганрог, Шахты" },
-      145: { name: "Воронежская область",     cities: "Лиски, Нововоронеж" },
-      152: { name: "Москва и Московская область", cities: "Москва, Коломна, Краснознаменск, Раменское, Щелково" }
-    };
-
-    const HIGHLIGHT_COLOR = '#ffff00'; // жёлтая подсветка
-
-    const tooltip = document.getElementById('tooltip');
-    const regionNameEl = tooltip.querySelector('.region-name');
-    const citiesEl = tooltip.querySelector('.cities');
-
     document.getElementById('mapFrame').addEventListener('load', function() {
       const svgDoc = this.contentDocument;
       const paths = svgDoc.querySelectorAll('path');
 
-      console.log('Найдено регионов:', paths.length);
-
       paths.forEach(function(path, index) {
-        const data = regions[index];
-
-        if (data) {
-          // Подсветка при загрузке
-          path.style.fill = HIGHLIGHT_COLOR;
-          path.style.cursor = 'pointer';
-
-          // Тултип при наведении
-          path.addEventListener('mouseenter', function(e) {
-            regionNameEl.textContent = data.name;
-            citiesEl.textContent = data.cities;
-            tooltip.style.opacity = '1';
-          });
-
-          path.addEventListener('mousemove', function(e) {
-            tooltip.style.left = (e.clientX + 15) + 'px';
-            tooltip.style.top = (e.clientY + 15) + 'px';
-          });
-
-          path.addEventListener('mouseleave', function() {
-            tooltip.style.opacity = '0';
-          });
-        }
+        path.style.cursor = 'pointer';
+        path.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          document.getElementById('list').textContent = 'Индекс: ' + index;
+          path.style.fill = '#00FF00';
+          setTimeout(() => { path.style.fill = ''; }, 500);
+        });
       });
     });
   </script>
