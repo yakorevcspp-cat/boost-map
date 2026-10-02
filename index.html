@@ -114,6 +114,21 @@
       150:"Луганская Народная Республика",151:"Республика Крым",152:"Москва и Московская область"
     };
 
+    const regionCenters = {
+      28:"Владивосток",29:"Хабаровск",31:"Благовещенск",33:"Курск",35:"Смоленск",
+      36:"Орёл",37:"Липецк",38:"Тамбов",39:"Тула",40:"Рязань",41:"Калуга",
+      42:"Владимир",45:"Тверь",46:"Ярославль",47:"Оренбург",
+      48:"Саратов",49:"Самара",50:"Ульяновск",51:"Пенза",52:"Саранск",
+      54:"Нижний Новгород",56:"Казань",58:"Уфа",59:"Киров",63:"Тюмень",
+      64:"Курган",65:"Челябинск",66:"Екатеринбург",68:"Великий Новгород",
+      69:"Вологда",70:"Псков",71:"Санкт-Петербург",72:"Мурманск",
+      77:"Архангельск",80:"Архангельск",81:"Архангельск",98:"Калининград",
+      99:"Волгоград",100:"Астрахань",108:"Краснодар",109:"Ставрополь",
+      113:"Кемерово",115:"Барнаул",116:"Новосибирск",117:"Омск",118:"Томск",
+      119:"Абакан",139:"Красноярск",140:"Иркутск",141:"Чита",143:"Пермь",
+      144:"Ростов-на-Дону",145:"Воронеж",152:"Москва"
+    };
+
     const myRegions = {
       28:["Владивосток"],29:["Хабаровск"],31:["Благовещенск"],36:["Орёл","Ливны"],
       37:["Липецк","Грязи","Данков","Елец","Задонск","Лебедянь","Чаплыгин"],38:["Тамбов"],
@@ -150,13 +165,32 @@
       143:["Пермь","Березники"],98:["Калининград","Светлогорск"]
     };
 
+    function sortCities(index, cities) {
+      const center = regionCenters[index];
+      const unique = Array.from(new Set(cities));
+      if (!center) return unique.sort((a,b) => a.localeCompare(b, 'ru'));
+      const rest = unique.filter(c => c !== center).sort((a,b) => a.localeCompare(b, 'ru'));
+      return unique.includes(center) ? [center, ...rest] : rest;
+    }
+
+    function buildSorted(obj) {
+      const result = {};
+      Object.keys(obj).forEach(function(idx) {
+        result[idx] = sortCities(Number(idx), obj[idx]);
+      });
+      return result;
+    }
+
+    const mySorted = buildSorted(myRegions);
+    const supportSorted = buildSorted(supportRegions);
+
     const allProjectsRegions = {};
     const allIndexes = new Set([...Object.keys(myRegions), ...Object.keys(supportRegions)].map(Number));
     allIndexes.forEach(function(idx) {
       const cities = new Set();
       if (myRegions[idx]) myRegions[idx].forEach(c => cities.add(c));
       if (supportRegions[idx]) supportRegions[idx].forEach(c => cities.add(c));
-      allProjectsRegions[idx] = Array.from(cities);
+      allProjectsRegions[idx] = sortCities(idx, Array.from(cities));
     });
 
     const COLORS = { my:'#ffff00', support:'#00cc44', all:'#3b82f6' };
@@ -184,8 +218,8 @@
       const paths = cachedPaths;
       const color = COLORS[currentLayer];
       let primary, secondary;
-      if (currentLayer === 'my') { primary = myRegions; secondary = supportRegions; }
-      else if (currentLayer === 'support') { primary = supportRegions; secondary = myRegions; }
+      if (currentLayer === 'my') { primary = mySorted; secondary = supportSorted; }
+      else if (currentLayer === 'support') { primary = supportSorted; secondary = mySorted; }
       else { primary = allProjectsRegions; secondary = null; }
 
       paths.forEach(function(path, index) {
