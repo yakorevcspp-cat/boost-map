@@ -78,7 +78,6 @@
   </div>
 
   <script>
-    // ===== СПРАВОЧНИК РЕГИОНОВ =====
     const allRegions = {
       10:"Республика Саха (Якутия)",12:"Чукотский автономный округ",27:"Магаданская область",
       28:"Приморский край",29:"Хабаровский край",30:"Еврейская автономная область",
@@ -110,7 +109,6 @@
       150:"Луганская Народная Республика",151:"Республика Крым",152:"Москва и Московская область"
     };
 
-    // ===== СЛОЙ 1: ПОД КЛЮЧ (города массивом) =====
     const myRegions = {
       28:["Владивосток"],29:["Хабаровск"],31:["Благовещенск"],36:["Орёл","Ливны"],
       37:["Липецк","Грязи","Данков","Елец","Задонск","Лебедянь","Чаплыгин"],38:["Тамбов"],
@@ -128,7 +126,6 @@
       145:["Лиски","Нововоронеж"],152:["Москва","Коломна","Краснознаменск","Раменское","Щелково"]
     };
 
-    // ===== СЛОЙ 2: ПРОДВИЖЕНИЕ (города массивом) =====
     const supportRegions = {
       29:["Комсомольск-на-Амуре"],36:["Орёл"],37:["Липецк","Елец"],38:["Тамбов","Мичуринск"],
       39:["Тула","Новомосковск"],40:["Рязань"],42:["Владимир","Ковров"],45:["Тверь"],
@@ -182,42 +179,38 @@
         path.style.fill = inPrimary ? color : '';
         path.style.cursor = name ? 'pointer' : 'default';
 
-        if (!path.dataset.bound) {
-          path.dataset.bound = '1';
+        path.onmouseenter = function() {
+          if (!name) return;
+          regionNameEl.textContent = name;
+          citiesEl.innerHTML = '';
+          noteEl.textContent = '';
 
-          path.addEventListener('mouseenter', function() {
-            if (!name) return;
-            regionNameEl.textContent = name;
-            citiesEl.innerHTML = '';
-            noteEl.textContent = '';
+          if (inPrimary) {
+            renderCities(inPrimary);
+          } else if (inSecondary) {
+            noteEl.textContent = currentLayer === 'my'
+              ? 'Здесь было продвижение'
+              : 'Здесь работали под ключ';
+          } else {
+            noteEl.textContent = currentLayer === 'my'
+              ? 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе'
+              : 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
+          }
+          tooltip.style.opacity = '1';
+        };
 
-            if (inPrimary) {
-              renderCities(inPrimary);
-            } else if (inSecondary) {
-              noteEl.textContent = currentLayer === 'my'
-                ? 'Здесь было продвижение'
-                : 'Здесь работали под ключ';
-            } else {
-              noteEl.textContent = currentLayer === 'my'
-                ? 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе'
-                : 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
-            }
-            tooltip.style.opacity = '1';
-          });
+        path.onmousemove = function(e) {
+          let left = e.clientX + 15;
+          let top = e.clientY + 15;
+          if (left + 350 > window.innerWidth) left = e.clientX - 355;
+          if (top + 250 > window.innerHeight) top = e.clientY - 260;
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+        };
 
-          path.addEventListener('mousemove', function(e) {
-            let left = e.clientX + 15;
-            let top = e.clientY + 15;
-            if (left + 350 > window.innerWidth) left = e.clientX - 355;
-            if (top + 250 > window.innerHeight) top = e.clientY - 260;
-            tooltip.style.left = left + 'px';
-            tooltip.style.top = top + 'px';
-          });
-
-          path.addEventListener('mouseleave', function() {
-            tooltip.style.opacity = '0';
-          });
-        }
+        path.onmouseleave = function() {
+          tooltip.style.opacity = '0';
+        };
       });
     }
 
