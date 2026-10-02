@@ -2,247 +2,43 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Карта — Буст Ивент</title>
+<title>Карта — определение индексов</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body {
-    width:100%; height:100vh; background:#fff; overflow:hidden;
-    font-family:'TikTok Sans', Arial, sans-serif;
-  }
+  html, body { width:100%; height:100vh; background:#fff; overflow:hidden; font-family:sans-serif; }
   .wrap { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
   .wrap iframe { width:100%; height:100%; border:none; display:block; }
-
-  #controls {
-    position:fixed; top:15px; left:50%; transform:translateX(-50%);
-    background:#000; border:1px solid #ffff00; border-radius:6px;
-    padding:6px; z-index:9999; display:flex; gap:6px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  #info {
+    position:fixed; top:10px; right:10px; background:#000; color:#0f0;
+    padding:15px; font-size:16px; border-radius:6px; z-index:9999;
+    border:1px solid #0f0;
   }
-  #controls button {
-    background:transparent; border:1px solid transparent;
-    color:#fff; padding:8px 20px; font-size:13px; cursor:pointer;
-    border-radius:4px; font-family:inherit; transition:all 0.2s;
-  }
-  #controls button:hover { background:#333; }
-  #controls button.active { background:#ffff00; color:#000; font-weight:600; }
-
-  #tooltip {
-    position:fixed; background:#000; border:1px solid #ffff00;
-    color:#fff; padding:10px 14px; font-size:13px; line-height:1.5;
-    pointer-events:none; opacity:0; transition:opacity 0.15s;
-    z-index:9999; max-width:340px; border-radius:4px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.4);
-  }
-  #tooltip .region-name {
-    color:#ffff00; font-weight:600; font-size:14px; margin-bottom:6px;
-  }
-  #tooltip .cities { color:#fff; }
-  #tooltip .cities div { margin-bottom:2px; }
-  #tooltip .note {
-    color:#ffff00; font-style:italic; margin-top:6px;
-    font-size:12px; padding-top:6px; border-top:1px solid #333;
-  }
-
-  #legend {
-    position:fixed; bottom:15px; left:50%; transform:translateX(-50%);
-    background:#000; border:1px solid #ffff00; border-radius:6px;
-    padding:8px 16px; z-index:9999; display:flex; gap:20px;
-    font-size:12px; color:#fff;
-  }
-  #legend .dot {
-    display:inline-block; width:10px; height:10px;
-    border-radius:50%; margin-right:6px; vertical-align:middle;
-  }
+  #info b { color:#fff; }
+  #index { color:#ff0; font-size:24px; font-weight:bold; margin-top:8px; }
 </style>
 </head>
 <body>
   <div class="wrap">
     <iframe id="mapFrame" src="map.svg" scrolling="no"></iframe>
   </div>
-
-  <div id="controls">
-    <button data-layer="my" class="active">Под ключ</button>
-    <button data-layer="support">Продвижение</button>
-    <button data-layer="all">Все проекты</button>
-  </div>
-
-  <div id="legend">
-    <span><span class="dot" style="background:#ffff00"></span>Под ключ</span>
-    <span><span class="dot" style="background:#00cc44"></span>Сопровождение</span>
-    <span><span class="dot" style="background:#3b82f6"></span>Все проекты</span>
-    <span><span class="dot" style="background:#cccccc"></span>Пока не работали</span>
-  </div>
-
-  <div id="tooltip">
-    <div class="region-name"></div>
-    <div class="cities"></div>
-    <div class="note"></div>
+  <div id="info">
+    <b>Кликните по региону:</b>
+    <div id="index">—</div>
   </div>
 
   <script>
-    const allRegions = {
-      10:"Республика Саха (Якутия)",12:"Чукотский автономный округ",27:"Магаданская область",
-      28:"Приморский край",29:"Хабаровский край",30:"Еврейская автономная область",
-      31:"Амурская область",32:"Сахалинская область",33:"Курская область",34:"Брянская область",
-      35:"Смоленская область",36:"Орловская область",37:"Липецкая область",38:"Тамбовская область",
-      39:"Тульская область",40:"Рязанская область",41:"Калужская область",42:"Владимирская область",
-      43:"Ивановская область",44:"Костромская область",45:"Тверская область",46:"Ярославская область",
-      47:"Оренбургская область",48:"Саратовская область",49:"Самарская область",50:"Ульяновская область",
-      51:"Пензенская область",52:"Республика Мордовия",54:"Нижегородская область",
-      56:"Республика Татарстан",57:"Удмуртская Республика",58:"Республика Башкортостан",
-      59:"Кировская область",62:"Ямало-Ненецкий автономный округ",63:"Тюменская область",
-      64:"Курганская область",65:"Челябинская область",66:"Свердловская область",
-      67:"Ханты-Мансийский автономный округ — Югра",68:"Новгородская область",
-      69:"Вологодская область",70:"Псковская область",
-      71:"Санкт-Петербург и Ленинградская область",72:"Мурманская область",
-      73:"Республика Карелия",74:"Республика Коми",77:"Архангельская область",
-      80:"Архангельская область",81:"Архангельская область",98:"Калининградская область",
-      99:"Волгоградская область",100:"Астраханская область",101:"Республика Калмыкия",
-      102:"Республика Дагестан",103:"Чеченская Республика",104:"Республика Ингушетия",
-      105:"Республика Северная Осетия — Алания",106:"Кабардино-Балкарская Республика",
-      107:"Карачаево-Черкесская Республика",108:"Краснодарский край",109:"Ставропольский край",
-      110:"Республика Адыгея",111:"Республика Бурятия",112:"Республика Тыва",
-      113:"Кемеровская область",114:"Республика Алтай",115:"Алтайский край",
-      116:"Новосибирская область",117:"Омская область",118:"Томская область",
-      119:"Республика Хакасия",139:"Красноярский край",140:"Иркутская область",
-      141:"Забайкальский край",142:"Камчатский край",143:"Пермский край",
-      144:"Ростовская область",145:"Воронежская область",146:"Белгородская область",
-      147:"Херсонская область",148:"Донецкая Народная Республика",149:"Запорожская область",
-      150:"Луганская Народная Республика",151:"Республика Крым",152:"Москва и Московская область"
-    };
-
-    const myRegions = {
-      28:["Владивосток"],29:["Хабаровск"],31:["Благовещенск"],36:["Орёл","Ливны"],
-      37:["Липецк","Грязи","Данков","Елец","Задонск","Лебедянь","Чаплыгин"],38:["Тамбов"],
-      39:["Тула"],40:["Рязань"],42:["Муром"],45:["Тверь"],46:["Рыбинск"],47:["Орск"],
-      51:["Пенза","Кузнецк"],52:["Саранск"],54:["Дзержинск"],56:["Казань"],58:["Стерлитамак"],
-      64:["Курган","Шадринск"],65:["Челябинск","Златоуст","Магнитогорск","Миасс","Озёрск"],
-      66:["Екатеринбург","Каменск-Уральский","Первоуральск"],68:["Боровичи"],
-      69:["Вологда","Череповец"],71:["Санкт-Петербург","Гатчина"],
-      72:["Мурманск","Апатиты","Кандалакша","Оленегорск","Полярные Зори","Североморск"],
-      77:["Архангельск"],80:["Архангельск"],81:["Архангельск"],100:["Ахтубинск","Знаменск"],
-      108:["Краснодар","Кущёвская","Славянск-на-Кубани","Усть-Лабинск"],
-      113:["Ленинск-Кузнецкий","Новокузнецк","Юрга"],116:["Новосибирск","Академгородок"],
-      118:["Томск"],119:["Абакан"],139:["Красноярск"],140:["Иркутск"],141:["Чита"],
-      144:["Ростов-на-Дону","Азов","Каменск-Шахтинский","Новочеркасск","Таганрог","Шахты"],
-      145:["Лиски","Нововоронеж"],152:["Москва","Коломна","Краснознаменск","Раменское","Щелково"]
-    };
-
-    const supportRegions = {
-      29:["Комсомольск-на-Амуре"],36:["Орёл"],37:["Липецк","Елец"],38:["Тамбов","Мичуринск"],
-      39:["Тула","Новомосковск"],40:["Рязань"],42:["Владимир","Ковров"],45:["Тверь"],
-      46:["Ярославль"],51:["Пенза"],54:["Нижний Новгород","Арзамас"],
-      56:["Набережные Челны","Нижнекамск","Альметьевск"],
-      58:["Уфа","Нефтекамск","Салават"],65:["Челябинск","Магнитогорск"],
-      66:["Екатеринбург","Каменск-Уральский","Нижний Тагил","Серов"],
-      68:["Великий Новгород"],71:["Пушкин","Тихвин"],72:["Мурманск"],100:["Астрахань"],
-      108:["Анапа","Новороссийск"],113:["Кемерово","Прокопьевск"],116:["Бердск"],
-      139:["Ачинск","Канск"],140:["Ангарск","Братск"],141:["Чита"],
-      144:["Ростов-на-Дону","Волгодонск","Новочеркасск"],145:["Воронеж"],152:["Красногорск"],
-      33:["Курск","Курчатов"],35:["Смоленск"],41:["Калуга"],43:["Кинешма"],
-      48:["Саратов","Балаково"],49:["Самара","Тольятти","Сызрань"],
-      50:["Ульяновск","Димитровград"],59:["Киров"],63:["Тюмень"],
-      70:["Псков","Великие Луки"],99:["Волгоград","Камышин"],
-      109:["Ставрополь","Пятигорск"],115:["Барнаул"],117:["Омск"],
-      143:["Пермь","Березники"],98:["Калининград","Светлогорск"]
-    };
-
-    // Вкладка "Все проекты" — объединяем без дублей
-    const allProjectsRegions = {};
-    const allIndexes = new Set([...Object.keys(myRegions), ...Object.keys(supportRegions)].map(Number));
-    allIndexes.forEach(function(idx) {
-      const cities = new Set();
-      if (myRegions[idx]) myRegions[idx].forEach(c => cities.add(c));
-      if (supportRegions[idx]) supportRegions[idx].forEach(c => cities.add(c));
-      allProjectsRegions[idx] = Array.from(cities);
-    });
-
-    const COLORS = { my:'#ffff00', support:'#00cc44', all:'#3b82f6' };
-
-    const tooltip = document.getElementById('tooltip');
-    const regionNameEl = tooltip.querySelector('.region-name');
-    const citiesEl = tooltip.querySelector('.cities');
-    const noteEl = tooltip.querySelector('.note');
-
-    let currentLayer = 'my';
-    let cachedPaths = null;
-
-    function renderCities(cities) {
-      citiesEl.innerHTML = '';
-      cities.forEach(function(city) {
-        const line = document.createElement('div');
-        line.textContent = city;
-        citiesEl.appendChild(line);
-      });
-    }
-
-    function renderMap(svgDoc) {
-      if (!cachedPaths) cachedPaths = svgDoc.querySelectorAll('path');
-      const paths = cachedPaths;
-      const color = COLORS[currentLayer];
-      let primary, secondary;
-      if (currentLayer === 'my') { primary = myRegions; secondary = supportRegions; }
-      else if (currentLayer === 'support') { primary = supportRegions; secondary = myRegions; }
-      else { primary = allProjectsRegions; secondary = null; }
-
-      paths.forEach(function(path, index) {
-        const name = allRegions[index];
-        const inPrimary = primary ? primary[index] : null;
-        const inSecondary = secondary ? secondary[index] : null;
-
-        path.style.fill = inPrimary ? color : '';
-        path.style.cursor = name ? 'pointer' : 'default';
-
-        path.onmouseenter = function() {
-          if (!name) return;
-          regionNameEl.textContent = name;
-          citiesEl.innerHTML = '';
-          noteEl.textContent = '';
-
-          if (inPrimary) {
-            renderCities(inPrimary);
-          } else if (inSecondary) {
-            noteEl.textContent = currentLayer === 'my'
-              ? 'Здесь было продвижение'
-              : 'Здесь работали под ключ';
-          } else {
-            if (currentLayer === 'my') {
-              noteEl.textContent = 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе';
-            } else if (currentLayer === 'support') {
-              noteEl.textContent = 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
-            } else {
-              noteEl.textContent = 'Здесь мы ещё не работали. С удовольствием применим опыт в вашем регионе';
-            }
-          }
-          tooltip.style.opacity = '1';
-        };
-
-        path.onmousemove = function(e) {
-          let left = e.clientX + 15;
-          let top = e.clientY + 15;
-          if (left + 350 > window.innerWidth) left = e.clientX - 355;
-          if (top + 280 > window.innerHeight) top = e.clientY - 290;
-          tooltip.style.left = left + 'px';
-          tooltip.style.top = top + 'px';
-        };
-
-        path.onmouseleave = function() {
-          tooltip.style.opacity = '0';
-        };
-      });
-    }
-
     document.getElementById('mapFrame').addEventListener('load', function() {
       const svgDoc = this.contentDocument;
-      cachedPaths = null;
-      renderMap(svgDoc);
+      const paths = svgDoc.querySelectorAll('path');
 
-      document.querySelectorAll('#controls button').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          currentLayer = this.dataset.layer;
-          renderMap(svgDoc);
+      paths.forEach(function(path, index) {
+        path.style.cursor = 'pointer';
+        path.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          document.getElementById('index').textContent = 'Индекс: ' + index;
+          path.style.fill = '#00FF00';
+          setTimeout(() => { path.style.fill = ''; }, 400);
         });
       });
     });
