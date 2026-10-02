@@ -150,7 +150,6 @@
       143:["Пермь","Березники"],98:["Калининград","Светлогорск"]
     };
 
-    // Вкладка "Все проекты" — объединяем без дублей
     const allProjectsRegions = {};
     const allIndexes = new Set([...Object.keys(myRegions), ...Object.keys(supportRegions)].map(Number));
     allIndexes.forEach(function(idx) {
@@ -161,6 +160,7 @@
     });
 
     const COLORS = { my:'#ffff00', support:'#00cc44', all:'#3b82f6' };
+    const GREY = '#cccccc';
 
     const tooltip = document.getElementById('tooltip');
     const regionNameEl = tooltip.querySelector('.region-name');
@@ -193,7 +193,7 @@
         const inPrimary = primary ? primary[index] : null;
         const inSecondary = secondary ? secondary[index] : null;
 
-        path.style.fill = inPrimary ? color : '';
+        path.style.fill = inPrimary ? color : GREY;
         path.style.cursor = name ? 'pointer' : 'default';
 
         path.onmouseenter = function() {
