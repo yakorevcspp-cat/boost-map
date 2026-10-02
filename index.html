@@ -63,11 +63,13 @@
   <div id="controls">
     <button data-layer="my" class="active">Под ключ</button>
     <button data-layer="support">Продвижение</button>
+    <button data-layer="all">Все проекты</button>
   </div>
 
   <div id="legend">
     <span><span class="dot" style="background:#ffff00"></span>Под ключ</span>
     <span><span class="dot" style="background:#00cc44"></span>Сопровождение</span>
+    <span><span class="dot" style="background:#3b82f6"></span>Все проекты</span>
     <span><span class="dot" style="background:#cccccc"></span>Пока не работали</span>
   </div>
 
@@ -145,7 +147,17 @@
       143:["Пермь","Березники"],98:["Калининград","Светлогорск"]
     };
 
-    const COLORS = { my:'#ffff00', support:'#00cc44' };
+    // Вкладка "Все проекты" — объединяем без дублей
+    const allProjectsRegions = {};
+    const allIndexes = new Set([...Object.keys(myRegions), ...Object.keys(supportRegions)].map(Number));
+    allIndexes.forEach(function(idx) {
+      const cities = new Set();
+      if (myRegions[idx]) myRegions[idx].forEach(c => cities.add(c));
+      if (supportRegions[idx]) supportRegions[idx].forEach(c => cities.add(c));
+      allProjectsRegions[idx] = Array.from(cities);
+    });
+
+    const COLORS = { my:'#ffff00', support:'#00cc44', all:'#3b82f6' };
 
     const tooltip = document.getElementById('tooltip');
     const regionNameEl = tooltip.querySelector('.region-name');
@@ -168,13 +180,15 @@
       if (!cachedPaths) cachedPaths = svgDoc.querySelectorAll('path');
       const paths = cachedPaths;
       const color = COLORS[currentLayer];
-      const primary = currentLayer === 'my' ? myRegions : supportRegions;
-      const secondary = currentLayer === 'my' ? supportRegions : myRegions;
+      let primary, secondary;
+      if (currentLayer === 'my') { primary = myRegions; secondary = supportRegions; }
+      else if (currentLayer === 'support') { primary = supportRegions; secondary = myRegions; }
+      else { primary = allProjectsRegions; secondary = null; }
 
       paths.forEach(function(path, index) {
         const name = allRegions[index];
-        const inPrimary = primary[index];
-        const inSecondary = secondary[index];
+        const inPrimary = primary ? primary[index] : null;
+        const inSecondary = secondary ? secondary[index] : null;
 
         path.style.fill = inPrimary ? color : '';
         path.style.cursor = name ? 'pointer' : 'default';
@@ -192,9 +206,13 @@
               ? 'Здесь было продвижение'
               : 'Здесь работали под ключ';
           } else {
-            noteEl.textContent = currentLayer === 'my'
-              ? 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе'
-              : 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
+            if (currentLayer === 'my') {
+              noteEl.textContent = 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе';
+            } else if (currentLayer === 'support') {
+              noteEl.textContent = 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
+            } else {
+              noteEl.textContent = 'Здесь мы ещё не работали. С удовольствием применим опыт в вашем регионе';
+            }
           }
           tooltip.style.opacity = '1';
         };
@@ -203,7 +221,7 @@
           let left = e.clientX + 15;
           let top = e.clientY + 15;
           if (left + 350 > window.innerWidth) left = e.clientX - 355;
-          if (top + 250 > window.innerHeight) top = e.clientY - 260;
+          if (top + 280 > window.innerHeight) top = e.clientY - 290;
           tooltip.style.left = left + 'px';
           tooltip.style.top = top + 'px';
         };
