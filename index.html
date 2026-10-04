@@ -20,8 +20,9 @@
   }
   #controls button {
     background:transparent; border:1px solid transparent;
-    color:#fff; padding:8px 20px; font-size:13px; cursor:pointer;
+    color:#fff; padding:8px 16px; font-size:12px; cursor:pointer;
     border-radius:4px; font-family:inherit; transition:all 0.2s;
+    white-space:nowrap;
   }
   #controls button:hover { background:#333; }
   #controls button.active { background:#ffff00; color:#000; font-weight:600; }
@@ -46,12 +47,35 @@
   #legend {
     position:fixed; bottom:15px; left:50%; transform:translateX(-50%);
     background:#000; border:1px solid #ffff00; border-radius:6px;
-    padding:8px 16px; z-index:9999; display:flex; gap:20px;
-    font-size:12px; color:#fff;
+    padding:8px 12px; z-index:9999; display:flex; gap:12px;
+    font-size:11px; color:#fff; flex-wrap:wrap; justify-content:center;
+    max-width:95vw;
   }
   #legend .dot {
     display:inline-block; width:10px; height:10px;
-    border-radius:50%; margin-right:6px; vertical-align:middle;
+    border-radius:50%; margin-right:5px; vertical-align:middle;
+  }
+
+  /* Мобильная адаптация */
+  @media (max-width: 768px) {
+    #controls {
+      top:8px; padding:4px; gap:4px;
+      max-width:95vw;
+    }
+    #controls button {
+      padding:7px 12px; font-size:11px;
+    }
+    #tooltip {
+      max-width:90vw;
+      font-size:12px;
+      padding:8px 12px;
+    }
+    #tooltip .region-name { font-size:13px; }
+    #legend {
+      bottom:8px; padding:6px 10px; gap:8px;
+      font-size:10px;
+    }
+    #legend .dot { width:8px; height:8px; margin-right:4px; }
   }
 </style>
 </head>
@@ -204,6 +228,7 @@
 
     let currentLayer = 'my';
     let cachedPaths = null;
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
     function renderCities(cities) {
       citiesEl.innerHTML = '';
@@ -212,6 +237,55 @@
         line.textContent = city;
         citiesEl.appendChild(line);
       });
+    }
+
+    function showTooltipForRegion(name, data, e) {
+      regionNameEl.textContent = name;
+      citiesEl.innerHTML = '';
+      noteEl.textContent = '';
+
+      if (data.inPrimary) {
+        renderCities(data.inPrimary);
+      } else if (data.inSecondary) {
+        noteEl.textContent = currentLayer === 'my'
+          ? 'Здесь было продвижение'
+          : 'Здесь работали под ключ';
+      } else {
+        if (currentLayer === 'my') {
+          noteEl.textContent = 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе';
+        } else if (currentLayer === 'support') {
+          noteEl.textContent = 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
+        } else {
+          noteEl.textContent = 'Здесь мы ещё не работали. С удовольствием применим опыт в вашем регионе';
+        }
+      }
+
+      tooltip.style.opacity = '1';
+
+      // Позиционирование
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const tooltipWidth = tooltipRect.width || 300;
+      const tooltipHeight = tooltipRect.height || 150;
+      const margin = 10;
+
+      if (isTouch) {
+        // На тач-устройствах: центр экрана по горизонтали, нижняя часть по вертикали
+        let left = (window.innerWidth - tooltipWidth) / 2;
+        let top = window.innerHeight - tooltipHeight - 80;
+        if (top < 80) top = 80;
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      } else {
+        // На десктопе: следуем за мышью
+        let left = e.clientX + 15;
+        let top = e.clientY + 15;
+        if (left + tooltipWidth > window.innerWidth - margin) left = e.clientX - tooltipWidth - 15;
+        if (top + tooltipHeight > window.innerHeight - margin) top = e.clientY - tooltipHeight - 15;
+        if (left < margin) left = margin;
+        if (top < margin) top = margin;
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      }
     }
 
     function renderMap(svgDoc) {
@@ -231,42 +305,48 @@
         path.style.fill = inPrimary ? color : GREY;
         path.style.cursor = name ? 'pointer' : 'default';
 
-        path.onmouseenter = function() {
-          if (!name) return;
-          regionNameEl.textContent = name;
-          citiesEl.innerHTML = '';
-          noteEl.textContent = '';
+        const data = { inPrimary, inSecondary };
 
-          if (inPrimary) {
-            renderCities(inPrimary);
-          } else if (inSecondary) {
-            noteEl.textContent = currentLayer === 'my'
-              ? 'Здесь было продвижение'
-              : 'Здесь работали под ключ';
-          } else {
-            if (currentLayer === 'my') {
-              noteEl.textContent = 'Здесь мы ещё не работали, но с удовольствием применим опыт в вашем регионе';
-            } else if (currentLayer === 'support') {
-              noteEl.textContent = 'Мероприятий в Вашем регионе пока не было. С удовольствием применим все свои навыки для Вашего мероприятия';
-            } else {
-              noteEl.textContent = 'Здесь мы ещё не работали. С удовольствием применим опыт в вашем регионе';
-            }
-          }
-          tooltip.style.opacity = '1';
-        };
+        if (isTouch) {
+          path.ontouchstart = function(e) {
+            if (!name) return;
+            e.preventDefault();
+            showTooltipForRegion(name, data, e.touches[0]);
+          };
+        } else {
+          path.onmouseenter = function(e) {
+            if (!name) return;
+            showTooltipForRegion(name, data, e);
+          };
+          path.onmousemove = function(e) {
+            if (!name) return;
+            // Пересчёт позиции при движении
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const tooltipWidth = tooltipRect.width || 300;
+            const tooltipHeight = tooltipRect.height || 150;
+            const margin = 10;
+            let left = e.clientX + 15;
+            let top = e.clientY + 15;
+            if (left + tooltipWidth > window.innerWidth - margin) left = e.clientX - tooltipWidth - 15;
+            if (top + tooltipHeight > window.innerHeight - margin) top = e.clientY - tooltipHeight - 15;
+            if (left < margin) left = margin;
+            if (top < margin) top = margin;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+          };
+          path.onmouseleave = function() {
+            tooltip.style.opacity = '0';
+          };
+        }
+      });
+    }
 
-        path.onmousemove = function(e) {
-          let left = e.clientX + 15;
-          let top = e.clientY + 15;
-          if (left + 350 > window.innerWidth) left = e.clientX - 355;
-          if (top + 280 > window.innerHeight) top = e.clientY - 290;
-          tooltip.style.left = left + 'px';
-          tooltip.style.top = top + 'px';
-        };
-
-        path.onmouseleave = function() {
+    // Закрытие тултипа на тач-устройствах при касании вне карты
+    if (isTouch) {
+      document.addEventListener('touchstart', function(e) {
+        if (!e.target.closest('#mapFrame')) {
           tooltip.style.opacity = '0';
-        };
+        }
       });
     }
 
@@ -280,6 +360,7 @@
           document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
           this.classList.add('active');
           currentLayer = this.dataset.layer;
+          tooltip.style.opacity = '0';
           renderMap(svgDoc);
         });
       });
