@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <title>Карта — Буст Ивент</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
     width:100%; height:100vh; background:#fff; overflow:hidden;
     font-family:'TikTok Sans', Arial, sans-serif;
+    touch-action: manipulation;
   }
   .wrap { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
   .wrap iframe { width:100%; height:100%; border:none; display:block; }
@@ -56,32 +58,19 @@
     border-radius:50%; margin-right:5px; vertical-align:middle;
   }
 
-  /* Мобильная адаптация */
   @media (max-width: 768px) {
-    #controls {
-      top:8px; padding:4px; gap:4px;
-      max-width:95vw;
-    }
-    #controls button {
-      padding:7px 12px; font-size:11px;
-    }
-    #tooltip {
-      max-width:90vw;
-      font-size:12px;
-      padding:8px 12px;
-    }
+    #controls { top:8px; padding:4px; gap:4px; max-width:95vw; }
+    #controls button { padding:7px 12px; font-size:11px; }
+    #tooltip { max-width:90vw; font-size:12px; padding:8px 12px; }
     #tooltip .region-name { font-size:13px; }
-    #legend {
-      bottom:8px; padding:6px 10px; gap:8px;
-      font-size:10px;
-    }
+    #legend { bottom:8px; padding:6px 10px; gap:8px; font-size:10px; }
     #legend .dot { width:8px; height:8px; margin-right:4px; }
   }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <iframe id="mapFrame" src="map.svg" scrolling="no"></iframe>
+    <iframe id="mapFrame" src="map.svg" scrolling="yes"></iframe>
   </div>
 
   <div id="controls">
@@ -239,7 +228,7 @@
       });
     }
 
-    function showTooltipForRegion(name, data, e) {
+    function showTooltipForRegion(name, data, x, y) {
       regionNameEl.textContent = name;
       citiesEl.innerHTML = '';
       noteEl.textContent = '';
@@ -262,30 +251,27 @@
 
       tooltip.style.opacity = '1';
 
-      // Позиционирование
       const tooltipRect = tooltip.getBoundingClientRect();
       const tooltipWidth = tooltipRect.width || 300;
       const tooltipHeight = tooltipRect.height || 150;
       const margin = 10;
 
+      let left, top;
       if (isTouch) {
-        // На тач-устройствах: центр экрана по горизонтали, нижняя часть по вертикали
-        let left = (window.innerWidth - tooltipWidth) / 2;
-        let top = window.innerHeight - tooltipHeight - 80;
+        left = (window.innerWidth - tooltipWidth) / 2;
+        top = window.innerHeight - tooltipHeight - 80;
         if (top < 80) top = 80;
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
+        if (left < margin) left = margin;
       } else {
-        // На десктопе: следуем за мышью
-        let left = e.clientX + 15;
-        let top = e.clientY + 15;
-        if (left + tooltipWidth > window.innerWidth - margin) left = e.clientX - tooltipWidth - 15;
-        if (top + tooltipHeight > window.innerHeight - margin) top = e.clientY - tooltipHeight - 15;
+        left = x + 15;
+        top = y + 15;
+        if (left + tooltipWidth > window.innerWidth - margin) left = x - tooltipWidth - 15;
+        if (top + tooltipHeight > window.innerHeight - margin) top = y - tooltipHeight - 15;
         if (left < margin) left = margin;
         if (top < margin) top = margin;
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
       }
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
     }
 
     function renderMap(svgDoc) {
@@ -307,20 +293,50 @@
 
         const data = { inPrimary, inSecondary };
 
+        // Убираем старые обработчики
+        path.onmouseenter = null;
+        path.onmousemove = null;
+        path.onmouseleave = null;
+        path.ontouchstart = null;
+        path.ontouchend = null;
+
         if (isTouch) {
+          // Тач-логика: различаем тап и жест
+          let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+          let moved = false;
+
           path.ontouchstart = function(e) {
             if (!name) return;
+            const t = e.touches[0];
+            touchStartX = t.clientX;
+            touchStartY = t.clientY;
+            touchStartTime = Date.now();
+            moved = false;
+          };
+
+          path.ontouchmove = function(e) {
+            if (!name) return;
+            const t = e.touches[0];
+            const dx = Math.abs(t.clientX - touchStartX);
+            const dy = Math.abs(t.clientY - touchStartY);
+            if (dx > 10 || dy > 10) moved = true;
+          };
+
+          path.ontouchend = function(e) {
+            if (!name) return;
+            if (moved) return; // Это был жест, а не тап
+            const dt = Date.now() - touchStartTime;
+            if (dt > 500) return; // Долгое нажатие — не тап
             e.preventDefault();
-            showTooltipForRegion(name, data, e.touches[0]);
+            showTooltipForRegion(name, data, 0, 0);
           };
         } else {
           path.onmouseenter = function(e) {
             if (!name) return;
-            showTooltipForRegion(name, data, e);
+            showTooltipForRegion(name, data, e.clientX, e.clientY);
           };
           path.onmousemove = function(e) {
             if (!name) return;
-            // Пересчёт позиции при движении
             const tooltipRect = tooltip.getBoundingClientRect();
             const tooltipWidth = tooltipRect.width || 300;
             const tooltipHeight = tooltipRect.height || 150;
@@ -341,7 +357,6 @@
       });
     }
 
-    // Закрытие тултипа на тач-устройствах при касании вне карты
     if (isTouch) {
       document.addEventListener('touchstart', function(e) {
         if (!e.target.closest('#mapFrame')) {
