@@ -30,20 +30,23 @@
   #controls button.active { background:#ffff00; color:#000; font-weight:600; }
 
   #tooltip {
-    position:fixed; background:#000; border:1px solid #ffff00;
+    position:fixed; background:#000;
+    border:1px solid #ffff00;
     color:#fff; padding:10px 14px; font-size:13px; line-height:1.5;
-    pointer-events:none; opacity:0; transition:opacity 0.15s;
+    pointer-events:none; opacity:0; transition:opacity 0.15s, border-color 0.2s;
     z-index:9999; max-width:340px; border-radius:4px;
-    box-shadow:0 4px 12px rgba(255,255,0,0.3);
+    box-shadow:0 4px 12px rgba(0,0,0,0.6);
   }
   #tooltip .region-name {
     color:#ffff00; font-weight:600; font-size:14px; margin-bottom:6px;
+    transition:color 0.2s;
   }
   #tooltip .cities { color:#fff; }
   #tooltip .cities div { margin-bottom:2px; }
   #tooltip .note {
     color:#ffff00; font-style:italic; margin-top:6px;
     font-size:12px; padding-top:6px; border-top:1px solid #333;
+    transition:color 0.2s;
   }
 
   #legend {
@@ -217,7 +220,7 @@
     });
 
     const COLORS = { my:'#ffff00', support:'#00cc44', all:'#3b82f6' };
-    const GREY = '#333333'; // тёмно-серый для неактивных
+    const GREY = '#333333';
 
     const tooltip = document.getElementById('tooltip');
     const regionNameEl = tooltip.querySelector('.region-name');
@@ -289,6 +292,13 @@
       tooltip.style.top = top + 'px';
     }
 
+    function applyTooltipColor() {
+      const c = COLORS[currentLayer];
+      tooltip.style.borderColor = c;
+      regionNameEl.style.color = c;
+      noteEl.style.color = c;
+    }
+
     function renderMap(svgDoc) {
       if (!cachedPaths) cachedPaths = svgDoc.querySelectorAll('path');
       const paths = cachedPaths;
@@ -298,13 +308,16 @@
       else if (currentLayer === 'support') { primary = supportSorted; secondary = mySorted; }
       else { primary = allProjectsRegions; secondary = null; }
 
+      // Цвет тултипа под текущую вкладку
+      applyTooltipColor();
+
       paths.forEach(function(path, index) {
         const name = allRegions[index];
         const inPrimary = primary ? primary[index] : null;
         const inSecondary = secondary ? secondary[index] : null;
 
         path.style.fill = inPrimary ? color : GREY;
-        path.style.stroke = 'none'; // убираем обводку
+        path.style.stroke = 'none';
         path.style.cursor = name ? 'pointer' : 'default';
 
         const data = { inPrimary, inSecondary };
